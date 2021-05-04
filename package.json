@@ -1,6 +1,6 @@
 {
   "name": "@stacks/rx",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Reactive client library for the Stacks blockchain",
   "author": "",
   "prettier": "@stacks/prettier-config",
@@ -35,10 +35,12 @@
     "esbuild-browser:watch": "esbuild src/browser.ts --bundle --watch --outfile=dist/esbuild/browser.js",
     "esbuild-node": "esbuild src/cli.ts --bundle --platform=node --minify --sourcemap=external --outfile=dist/esbuild/cli.js",
     "esbuild-node:dev": "esbuild src/cli.ts --bundle --sourcemap=external --outfile=dist/esbuild/cli.js",
-    "esbuild-node:watch": "esbuild src/cli.ts --bundle --watch --sourcemap=external --outfile=dist/esbuild/cli.js"
+    "esbuild-node:watch": "esbuild src/cli.ts --bundle --watch --sourcemap=external --outfile=dist/esbuild/cli.js",
+    "prepublish": "yarn build"
   },
   "devDependencies": {
     "@stacks/prettier-config": "^0.0.7",
+    "@stacks/stacks-blockchain-api-types": "^0.58.0",
     "@types/jest": "^26.0.21",
     "@types/node": "^14.14.35",
     "@types/url-join": "^4.0.0",

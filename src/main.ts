@@ -1,5 +1,6 @@
-import { EMPTY, from, merge, Subject, timer } from 'rxjs';
-import { Configuration, BlocksApi } from '@stacks/blockchain-api-client';
+import { EMPTY, from, merge, Observable, Subject, timer } from 'rxjs';
+import { Configuration, BlocksApi, TransactionsApi } from '@stacks/blockchain-api-client';
+import { Transaction } from '@stacks/stacks-blockchain-api-types';
 import { catchError, concatMap, map, tap, take } from 'rxjs/operators';
 
 export const HIRO_API_URL = 'https://stacks-node-api.mainnet.stacks.co';
@@ -14,6 +15,7 @@ export class RxStacks {
     basePath: this.config.url,
   });
   private blocksApi = new BlocksApi(this.apiConfig);
+  private txApi = new TransactionsApi(this.apiConfig);
 
   constructor(public config: RxStacksConfig) {}
 
@@ -36,5 +38,14 @@ export class RxStacks {
         tap(block => this.currentBlockHeight$.next(block.height))
       );
     })
+  );
+
+  // mempoolTxs$: Observable<MempoolTransaction> = from(this.txApi.getMempoolTransactionList({})).pipe(
+  //   concatMap(initialResults => {})
+  // );
+
+  txs$: Observable<Transaction> = this.blocks$.pipe(
+    concatMap(block => Promise.all(block.txs.map(txId => this.txApi.getTransactionById({ txId })))),
+    concatMap(arr => from(arr as Transaction[]))
   );
 }
