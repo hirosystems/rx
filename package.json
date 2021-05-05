@@ -1,6 +1,6 @@
 {
   "name": "@stacks/rx",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Reactive client library for the Stacks blockchain",
   "author": "",
   "prettier": "@stacks/prettier-config",
@@ -8,8 +8,8 @@
   "license": "MIT",
   "keywords": [
     "typescript",
-    "boilerplate",
-    "esbuild"
+    "rxjs",
+    "stacks"
   ],
   "main": "./dist/tsc/main.js",
   "types": "./dist/tsc/main.d.ts",
@@ -28,6 +28,7 @@
     "clean": "rm -rf dist build package",
     "ts-node": "ts-node",
     "docs": "typedoc --entryPoints src/main.ts",
+    "dev:publish": "tsc-watch --onSuccess \"yalc publish\"",
     "build": "tsc -p tsconfig.json",
     "build-all": "yarn clean && yarn build && yarn esbuild-node && yarn esbuild-browser",
     "esbuild-browser": "esbuild src/browser.ts --bundle --minify --sourcemap=external --outfile=dist/esbuild/browser.js",
@@ -35,12 +36,11 @@
     "esbuild-browser:watch": "esbuild src/browser.ts --bundle --watch --outfile=dist/esbuild/browser.js",
     "esbuild-node": "esbuild src/cli.ts --bundle --platform=node --minify --sourcemap=external --outfile=dist/esbuild/cli.js",
     "esbuild-node:dev": "esbuild src/cli.ts --bundle --sourcemap=external --outfile=dist/esbuild/cli.js",
-    "esbuild-node:watch": "esbuild src/cli.ts --bundle --watch --sourcemap=external --outfile=dist/esbuild/cli.js",
-    "prepublish": "yarn build"
+    "esbuild-node:watch": "esbuild src/cli.ts --bundle --watch --sourcemap=external --outfile=dist/esbuild/cli.js"
   },
   "devDependencies": {
     "@stacks/prettier-config": "^0.0.7",
-    "@stacks/stacks-blockchain-api-types": "^0.58.0",
+    "@stacks/stacks-blockchain-api-types": "0.58",
     "@types/jest": "^26.0.21",
     "@types/node": "^14.14.35",
     "@types/url-join": "^4.0.0",
@@ -56,7 +56,9 @@
     "typescript": "^4.2.3"
   },
   "dependencies": {
-    "@stacks/blockchain-api-client": "^0.57.0",
+    "@stacks/blockchain-api-client": "^0.58.0",
+    "socket.io-client": "^4.0.1",
+    "tsc-watch": "^4.2.9",
     "url-join": "^4.0.1"
   },
   "peerDependencies": {

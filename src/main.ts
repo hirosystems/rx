@@ -1,23 +1,107 @@
-import { EMPTY, from, merge, Observable, Subject, timer } from 'rxjs';
+import { EMPTY, from, merge, Observable, Subject, Subscriber, timer } from 'rxjs';
+import { catchError, concatMap, map, tap, take, filter } from 'rxjs/operators';
+import { io, Socket } from 'socket.io-client';
+
 import { Configuration, BlocksApi, TransactionsApi } from '@stacks/blockchain-api-client';
-import { Transaction } from '@stacks/stacks-blockchain-api-types';
-import { catchError, concatMap, map, tap, take } from 'rxjs/operators';
+import {
+  AddressStxBalanceResponse,
+  AddressTransactionWithTransfers,
+  Block,
+  MempoolTransaction,
+  Transaction,
+} from '@stacks/stacks-blockchain-api-types';
 
 export const HIRO_API_URL = 'https://stacks-node-api.mainnet.stacks.co';
 export const HIRO_TESTNET_API_URL = 'https://stacks-node-api.testnet.stacks.co';
+
+function getWsUrl(url: string): URL {
+  let urlObj: URL;
+  try {
+    urlObj = new URL(url);
+    if (!urlObj.protocol || !urlObj.host) {
+      throw new TypeError(`[ERR_INVALID_URL]: Invalid URL: ${url}`);
+    }
+  } catch (error) {
+    console.error(`Pass an absolute URL with a protocol/schema, e.g. "wss://example.com"`);
+    throw error;
+  }
+  return urlObj;
+}
 
 interface RxStacksConfig {
   url: string;
 }
 
+export type AddressTransactionsRoom<
+  TAddress extends string = string
+> = `address-transactions:${TAddress}`;
+export type AddressStxBalanceRoom<
+  TAddress extends string = string
+> = `address-stx-balance:${TAddress}`;
+export type Room = 'blocks' | 'mempool' | AddressTransactionsRoom | AddressStxBalanceRoom;
+
+export interface ClientToServerMessages {
+  subscribe: (...room: Room[]) => void;
+  unsubscribe: (...room: Room[]) => void;
+}
+
+export interface ServerToClientMessages {
+  block: (block: Block) => void;
+  mempool: (transaction: MempoolTransaction) => void;
+  'address-transaction': (address: string, tx: AddressTransactionWithTransfers) => void;
+  'address-stx-balance': (address: string, stxBalance: AddressStxBalanceResponse) => void;
+}
+
 export class RxStacks {
-  private apiConfig = new Configuration({
-    basePath: this.config.url,
-  });
+  private apiConfig = new Configuration({ basePath: this.config.url });
   private blocksApi = new BlocksApi(this.apiConfig);
   private txApi = new TransactionsApi(this.apiConfig);
+  private socket: Socket<ServerToClientMessages, ClientToServerMessages>;
 
-  constructor(public config: RxStacksConfig) {}
+  constructor(public config: RxStacksConfig) {
+    console.log('Init RxStacks');
+    this.socket = io(getWsUrl(this.apiConfig.basePath).href, {
+      query: {
+        subscriptions: ['blocks', 'mempool'].join(','),
+      },
+    });
+  }
+
+  private createEventObservable<T>(
+    room: Room,
+    eventName: keyof ServerToClientMessages,
+    handler: (subscriber: Subscriber<T>) => (...prop: any) => void
+  ) {
+    return new Observable<T>(subscriber => {
+      this.socket.emit('subscribe', room);
+      this.socket.on(eventName, handler(subscriber));
+    });
+  }
+
+  blocks$ = this.createEventObservable<Block>('blocks', 'block', subscriber => block =>
+    subscriber.next(block)
+  );
+
+  mempoolTxs$ = this.createEventObservable<MempoolTransaction>(
+    'mempool',
+    'mempool',
+    subscriber => mempool => subscriber.next(mempool)
+  );
+
+  txs$: Observable<Transaction> = this.blocks$.pipe(
+    concatMap(block => Promise.all(block.txs.map(txId => this.txApi.getTransactionById({ txId })))),
+    concatMap(arr => from(arr as Transaction[]))
+  );
+
+  getAddressTransaction(address: string): Observable<AddressTransactionWithTransfers> {
+    return this.createEventObservable<AddressTransactionWithTransfers>(
+      `address-transactions:${address}` as AddressTransactionsRoom,
+      'address-transaction',
+      subscriber => (addr: string, tx) => {
+        if (address === addr) subscriber.next(tx);
+      }
+    );
+  }
 
   initialBlockHeight$ = from(this.blocksApi.getBlockList({ limit: 1 })).pipe(
     map(resp => resp.results[0].height)
@@ -25,27 +109,24 @@ export class RxStacks {
 
   currentBlockHeight$ = new Subject<number>();
 
-  blocks$ = merge(this.initialBlockHeight$, this.currentBlockHeight$).pipe(
-    concatMap(height => {
-      return timer(0, 20000).pipe(
-        tap(() => console.log('Polling for block ', height + 1)),
-        concatMap(() =>
-          from(this.blocksApi.getBlockByHeight({ height: height + 1 })).pipe(
-            catchError(() => EMPTY)
-          )
-        ),
-        take(1),
-        tap(block => this.currentBlockHeight$.next(block.height))
-      );
-    })
-  );
+  polling = {
+    blocksPolling$: merge(this.initialBlockHeight$, this.currentBlockHeight$).pipe(
+      concatMap(height => {
+        return timer(0, 20000).pipe(
+          tap(() => console.log('Polling for block ', height + 1)),
+          concatMap(() =>
+            from(this.blocksApi.getBlockByHeight({ height: height + 1 })).pipe(
+              catchError(() => EMPTY)
+            )
+          ),
+          take(1),
+          tap(block => this.currentBlockHeight$.next(block.height))
+        );
+      })
+    ),
 
-  // mempoolTxs$: Observable<MempoolTransaction> = from(this.txApi.getMempoolTransactionList({})).pipe(
-  //   concatMap(initialResults => {})
-  // );
-
-  txs$: Observable<Transaction> = this.blocks$.pipe(
-    concatMap(block => Promise.all(block.txs.map(txId => this.txApi.getTransactionById({ txId })))),
-    concatMap(arr => from(arr as Transaction[]))
-  );
+    mempoolTxsPolling$: from(this.txApi.getMempoolTransactionList({})).pipe(
+      tap(initialResults => console.log(initialResults))
+    ),
+  };
 }
