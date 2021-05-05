@@ -32,26 +32,32 @@ interface RxStacksConfig {
   url: string;
 }
 
-export type AddressTransactionsRoom<
-  TAddress extends string = string
-> = `address-transactions:${TAddress}`;
-export type AddressStxBalanceRoom<
-  TAddress extends string = string
-> = `address-stx-balance:${TAddress}`;
-export type Room = 'blocks' | 'mempool' | AddressTransactionsRoom | AddressStxBalanceRoom;
+type AddressTransactionTopic = `address-transaction:${string}`;
+type AddressStxBalanceTopic = `address-stx-balance:${string}`;
+type Topic = 'block' | 'mempool' | AddressTransactionTopic | AddressStxBalanceTopic;
 
-export interface ClientToServerMessages {
-  subscribe: (...room: Room[]) => void;
-  unsubscribe: (...room: Room[]) => void;
+interface ClientToServerMessages {
+  subscribe: (topic: Topic | Topic[], callback: (error: string | null) => void) => void;
+  unsubscribe: (...topic: Topic[]) => void;
 }
 
-export interface ServerToClientMessages {
+interface ServerToClientMessages {
   block: (block: Block) => void;
   mempool: (transaction: MempoolTransaction) => void;
+
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore scheduled for support in TS v4.3 https://github.com/microsoft/TypeScript/pull/26797
+  [key: AddressTransactionTopic]: (
+    address: string,
+    stxBalance: AddressTransactionWithTransfers
+  ) => void;
   'address-transaction': (address: string, tx: AddressTransactionWithTransfers) => void;
+
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore scheduled for support in TS v4.3 https://github.com/microsoft/TypeScript/pull/26797
+  [key: AddressStxBalanceTopic]: (address: string, stxBalance: AddressStxBalanceResponse) => void;
   'address-stx-balance': (address: string, stxBalance: AddressStxBalanceResponse) => void;
 }
-
 export class RxStacks {
   private apiConfig = new Configuration({ basePath: this.config.url });
   private blocksApi = new BlocksApi(this.apiConfig);
@@ -62,23 +68,23 @@ export class RxStacks {
     console.log('Init RxStacks');
     this.socket = io(getWsUrl(this.apiConfig.basePath).href, {
       query: {
-        subscriptions: ['blocks', 'mempool'].join(','),
+        subscriptions: ['block', 'mempool'].join(','),
       },
     });
   }
 
   private createEventObservable<T>(
-    room: Room,
+    topic: Topic,
     eventName: keyof ServerToClientMessages,
     handler: (subscriber: Subscriber<T>) => (...prop: any) => void
   ) {
     return new Observable<T>(subscriber => {
-      this.socket.emit('subscribe', room);
+      this.socket.emit('subscribe', topic, err => console.log(err));
       this.socket.on(eventName, handler(subscriber));
     });
   }
 
-  blocks$ = this.createEventObservable<Block>('blocks', 'block', subscriber => block =>
+  blocks$ = this.createEventObservable<Block>('block', 'block', subscriber => block =>
     subscriber.next(block)
   );
 
@@ -95,7 +101,7 @@ export class RxStacks {
 
   getAddressTransaction(address: string): Observable<AddressTransactionWithTransfers> {
     return this.createEventObservable<AddressTransactionWithTransfers>(
-      `address-transactions:${address}` as AddressTransactionsRoom,
+      `address-transactions:${address}` as AddressTransactionTopic,
       'address-transaction',
       subscriber => (addr: string, tx) => {
         if (address === addr) subscriber.next(tx);
