@@ -20,6 +20,16 @@ const client = new RxStacks({ url: HIRO_API_URL });
 client.blocks$.subscribe(block => console.log('New block: ', block.height));
 ```
 
+## Demo App
+
+```bash
+git clone https://github.com/blockstack/rx
+cd demo/demo-app
+yarn && yarn start
+```
+
+Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+
 ## Resources
 
 - [RxJS documentation](https://rxjs-dev.firebaseapp.com/guide/overview)
