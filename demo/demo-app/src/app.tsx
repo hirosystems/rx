@@ -14,13 +14,13 @@ function useRxStacks(url: string) {
   return useMemo(() => new RxStacks({ url }), [url]);
 }
 
-const url = 'https://stacks-node-api.regtest.stacks.co';
+const url = 'https://stacks.zone117x.com';
 const network = new StacksTestnet();
 network.coreApiUrl = url;
 
 const App = () => {
   const client = useRxStacks(url);
-  // const [loading, setLoading] = useState;
+
   const createTransaction = useCallback(
     () =>
       makeSTXTokenTransfer({
@@ -36,18 +36,16 @@ const App = () => {
 
   const sendTxStream$ = useObservable(() =>
     initiateTxSend$.pipe(
-      // tap(() => setLoading(true)),
       concatMap(() => createTransaction()),
       concatMap(tx => from(broadcastTransaction(tx, network))),
       tap(() => {
-        // setLoading(false);
         toast.success('Transaction successfully broadcast');
       }),
       switchMap(newTx =>
-        client.txs$.pipe(
+        client.mempoolTxs$.pipe(
           filter(tx => tx.tx_id === '0x' + newTx),
           take(1),
-          tap(() => toast.success(`Tx in anchor block, Txid: 0x${newTx}`))
+          tap(() => toast.success(`New mempool tx, Txid: 0x${newTx}`))
         )
       )
     )
