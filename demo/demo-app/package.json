@@ -1,7 +1,8 @@
 {
   "name": "demo-app",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "homepage": "https://blockstack.github.io/rx",
   "dependencies": {
     "@emotion/react": "^11.1.5",
     "@stacks/network": "^1.5.0-alpha.0",
