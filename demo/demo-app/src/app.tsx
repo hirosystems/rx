@@ -14,7 +14,7 @@ function useRxStacks(url: string) {
   return useMemo(() => new RxStacks({ url }), [url]);
 }
 
-const url = 'https://stacks.zone117x.com';
+const url = 'https://stacks-node-api.regtest.stacks.co';
 const network = new StacksTestnet();
 network.coreApiUrl = url;
 

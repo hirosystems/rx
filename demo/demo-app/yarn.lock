@@ -2351,10 +2351,10 @@
   dependencies:
     "@stacks/common" "^1.2.2"
 
-"@stacks/rx@^0.0.3":
-  version "0.0.3"
-  resolved "https://registry.yarnpkg.com/@stacks/rx/-/rx-0.0.3.tgz#7c5c1ab5e397354111b433e5ed8fbe28a9292540"
-  integrity sha512-nI2e7Mc95LVeSt45W1yLs72F/j0NCqxqBSxZ9OGHa9DUpZPIMpmbJE3Cq2+ybTABxjqG3z3AIBJrY8htyH97Yw==
+"@stacks/rx@^0.0.4":
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/@stacks/rx/-/rx-0.0.4.tgz#071649830a79cd82994557c4af48a5381ff0e9d1"
+  integrity sha512-8qKVpj0JdXPmuqY1VwlOGJB52a/ZwDeR6gdKkZc1+BG9F8EnFdR4EQfeEZTJGCrf6JoemWZNXlDKJ4eUTsQfFA==
   dependencies:
     "@stacks/blockchain-api-client" "^0.58.0"
     socket.io-client "^4.0.1"
