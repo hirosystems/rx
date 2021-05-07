@@ -79,7 +79,10 @@ export class RxStacks {
     handler: (subscriber: Subscriber<T>) => (...prop: any) => void
   ) {
     return new Observable<T>(subscriber => {
-      this.socket.emit('subscribe', topic, err => console.log(err));
+      this.socket.emit('subscribe', topic, err => {
+        // throw new Error('Subscribing to topic');
+        if (err) console.error('error subscribing to', err, topic, eventName);
+      });
       this.socket.on(eventName, handler(subscriber));
     });
   }
@@ -101,7 +104,7 @@ export class RxStacks {
 
   getAddressTransaction(address: string): Observable<AddressTransactionWithTransfers> {
     return this.createEventObservable<AddressTransactionWithTransfers>(
-      `address-transactions:${address}` as AddressTransactionTopic,
+      `address-transaction:${address}` as AddressTransactionTopic,
       'address-transaction',
       subscriber => (addr: string, tx) => {
         if (address === addr) subscriber.next(tx);
