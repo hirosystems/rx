@@ -106,8 +106,9 @@ export class RxStacks {
     return this.createEventObservable<AddressTransactionWithTransfers>(
       `address-transaction:${address}` as AddressTransactionTopic,
       'address-transaction',
-      subscriber => (addr: string, tx) => {
-        if (address === addr) subscriber.next(tx);
+      subscriber => (addr: string, tx: AddressTransactionWithTransfers) => {
+        console.log('getAddressTransaction', address, addr, tx);
+        if (address === tx.tx.sender_address) subscriber.next(tx);
       }
     );
   }
