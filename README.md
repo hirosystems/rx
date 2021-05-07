@@ -30,6 +30,26 @@ yarn && yarn start
 
 Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
+## Tutorial
+
+### Using @stacks/rx to follow events of a transaction broadcast
+
+```ts
+
+from(broadcastTransaction(transaction)).pipe(
+
+  tap(tx => notifyBroadcastSuccess(tx)),
+  
+  concatMap(txid => mempoolTxs$.pipe(filterByTxid(txid))),
+
+  tap(mempoolTx => notifyTxInMempool(mempoolTx)),
+
+  concatMap(memTx => txs$.pipe(filterByTxid(txid))),
+)
+.subscribe(tx => notifyTransactionConfirm());
+```
+
+
 ## Resources
 
 - [RxJS documentation](https://rxjs-dev.firebaseapp.com/guide/overview)
