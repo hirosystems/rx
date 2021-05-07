@@ -32,7 +32,7 @@ Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
 ## Tutorial
 
-### Using @stacks/rx to follow events of a transaction broadcast
+### Using @stacks/rx to follow a transaction's lifecycle
 
 ```ts
 
