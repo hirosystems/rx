@@ -1,5 +1,5 @@
 import { EMPTY, from, merge, Observable, Subject, Subscriber, timer } from 'rxjs';
-import { catchError, concatMap, map, tap, take, filter } from 'rxjs/operators';
+import { catchError, concatMap, map, tap, take, share } from 'rxjs/operators';
 import { io, Socket } from 'socket.io-client';
 
 import { Configuration, BlocksApi, TransactionsApi } from '@stacks/blockchain-api-client';
@@ -62,29 +62,41 @@ export class RxStacks {
   private apiConfig = new Configuration({ basePath: this.config.url });
   private blocksApi = new BlocksApi(this.apiConfig);
   private txApi = new TransactionsApi(this.apiConfig);
-  private socket: Socket<ServerToClientMessages, ClientToServerMessages>;
 
-  constructor(public config: RxStacksConfig) {
-    console.log('Init RxStacks');
-    this.socket = io(getWsUrl(this.apiConfig.basePath).href, {
+  constructor(public config: RxStacksConfig) {}
+
+  socket$ = new Observable<Socket<ServerToClientMessages, ClientToServerMessages>>(subscriber => {
+    const socket = io(getWsUrl(this.apiConfig.basePath).href, {
       query: {
         subscriptions: ['block', 'mempool'].join(','),
       },
     });
-  }
+    subscriber.next(socket);
+    return () => {
+      console.log('closing socket');
+      socket.close();
+    };
+  }).pipe(
+    // Ensures that socket$ only creates 1 instance
+    share()
+  );
 
   private createEventObservable<T>(
     topic: Topic,
     eventName: keyof ServerToClientMessages,
     handler: (subscriber: Subscriber<T>) => (...prop: any) => void
   ) {
-    return new Observable<T>(subscriber => {
-      this.socket.emit('subscribe', topic, err => {
-        // throw new Error('Subscribing to topic');
-        if (err) console.error('error subscribing to', err, topic, eventName);
-      });
-      this.socket.on(eventName, handler(subscriber));
-    });
+    return this.socket$.pipe(
+      concatMap(
+        socket =>
+          new Observable<T>(subscriber => {
+            socket.emit('subscribe', topic, err => {
+              if (err) console.error('error subscribing to', err, topic, eventName);
+            });
+            socket.on(eventName, handler(subscriber));
+          })
+      )
+    );
   }
 
   blocks$ = this.createEventObservable<Block>('block', 'block', subscriber => block =>

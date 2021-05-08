@@ -10,8 +10,6 @@ Reactive Extensions client for the Stacks Blockchain 🚀
 yarn add @stacks/rx rxjs
 ```
 
-## Example usage
-
 ```ts
 import { RxStacks, HIRO_API_URL } from '@stacks/rx';
 
@@ -28,7 +26,11 @@ cd demo/demo-app
 yarn && yarn start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+
+## Tutorial
+
+### Broadcasting a transaction
 
 ## Tutorial
 
